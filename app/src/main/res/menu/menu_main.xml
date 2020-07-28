@@ -1,0 +1,28 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.madurasoftware.vmble.MainActivity">
+    <item
+        android:id="@+id/action_bluetooth"
+        android:orderInCategory="300"
+        android:title="@string/user"
+        android:icon="@drawable/ic_bluetooth_connected_black_24dp"
+        android:tint="@android:color/white"
+        app:showAsAction="ifRoom">
+
+    </item>
+    <item
+        android:id="@+id/action_disconnect"
+        android:orderInCategory="300"
+        android:title="@string/user"
+        android:icon="@drawable/ic_bluetooth_disabled_black_24dp"
+        android:tint="@android:color/white"
+        app:showAsAction="ifRoom">
+
+    </item>
+    <item
+        android:id="@+id/action_settings"
+        android:orderInCategory="100"
+        android:title="@string/action_settings"
+        app:showAsAction="never" />
+</menu>
