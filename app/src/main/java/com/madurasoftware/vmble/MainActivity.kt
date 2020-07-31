@@ -53,6 +53,7 @@ class MainActivity : AppCompatActivity() {
                     2-> mBluetoothStatus.setText(R.string.connecting)
                     3-> mBluetoothStatus.setText(R.string.disconnecting)
                     4-> mBluetoothStatus.setText(R.string.disconnected)
+                    5-> mBluetoothStatus.setText(R.string.no_address)
                 }
             }
         }

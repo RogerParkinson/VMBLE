@@ -20,6 +20,7 @@ import android.service.notification.StatusBarNotification
 import androidx.appcompat.app.AppCompatActivity
 
 const val ACTION = "CONNECTION_UPDATE"
+const val MESSAGE = "MESSAGE"
 const val CONNECTION_INFO = "ConnectionInfo"
 // used in bluetooth handler to identify message status
 const val CONNECTING_STATUS = 3
@@ -28,6 +29,7 @@ const val CONNECTING_STATUS_CONNECTED = 1
 const val CONNECTING_STATUS_CONNECTING = 2
 const val CONNECTING_STATUS_DISCONNECTING = 3
 const val CONNECTING_STATUS_DISCONNECTED = 4
+const val CONNECTING_STATUS_NO_ADDRESS = 5
 
 class BLEService: Service() {
 
@@ -109,26 +111,42 @@ class BLEService: Service() {
         if (android.os.Debug.isDebuggerConnected()) {
             android.os.Debug.waitForDebugger()
         }
-        val address = intent.getStringExtra(CONNECTION)
-        Log.d(TAG, "onStartCommand with address $address")
+        val message = intent.getStringExtra(MESSAGE)
+        if (message !=null) {
+            NotificationQueue.add(message)
+        }
+        var address = intent.getStringExtra(CONNECTION)
+        Log.d(TAG, "onStartCommand with address $address message $message existing BluetoothAddress $mBluetoothDeviceAddress ")
+        if (address == null) {
+            address = mBluetoothDeviceAddress
+        }
+        if (address == null) {
+            broadcastMessage(CONNECTING_STATUS_NO_ADDRESS,"","no-address")
+            return Service.START_NOT_STICKY
+        }
+
+        var count = 0;
 
         while (connect(address)) {
+            count++
+            Log.d(TAG, "connect executed $count times")
             characteristic = figureCharacteristic(mBluetoothGatt!!)
-            if (characteristic == null) {
+            while (characteristic == null && count < 5) {
                 Thread.sleep(1000)
-                continue
+                characteristic = figureCharacteristic(mBluetoothGatt!!)
+                count++
             }
-            if (!processMessages()) {
+            if (characteristic != null && !processMessages()) {
                 if (mBluetoothGatt != null) {                                                   //Check for existing BluetoothGatt connection
                     mBluetoothGatt!!.close()                                                     //Close BluetoothGatt coonection for proper cleanup
                     mBluetoothGatt = null    //@@                                                  //No longer have a BluetoothGatt connection
                 }
-                broadcastMessage(CONNECTING_STATUS_DISCONNECTED,address)
+                //broadcastMessage(CONNECTING_STATUS_DISCONNECTED,address)
                 break
             }
         }
         Log.d(TAG, "onStartCommand exiting")
-        return Service.START_STICKY
+        return Service.START_NOT_STICKY
     }
 
     private fun figureCharacteristic(gatt: BluetoothGatt): BluetoothGattCharacteristic? {
@@ -140,6 +158,7 @@ class BLEService: Service() {
                 }
             }
         }
+        Log.d(TAG, "figureCharacteristic found null")
         return null
     }
 
@@ -151,41 +170,41 @@ class BLEService: Service() {
     }
 
 //    // An activity has unbound from this service
-//    override fun onUnbind(intent: Intent): Boolean {
-//        Log.d(TAG, "onUnbind ")
+    override fun onUnbind(intent: Intent): Boolean {
+        Log.d(TAG, "onUnbind ")
 //
 ////        if (mBluetoothGatt != null) {                                                   //Check for existing BluetoothGatt connection
 ////            mBluetoothGatt!!.close()                                                     //Close BluetoothGatt coonection for proper cleanup
 ////            mBluetoothGatt = null                                                      //No longer have a BluetoothGatt connection
 ////        }
 //
-//        return super.onUnbind(intent)
-//    }
+        return super.onUnbind(intent)
+    }
 
-    private fun broadcastMessage(message:Int, info:String) {
+    private fun broadcastMessage(message:Int, info:String, comment:String) {
         val intent = Intent()
         intent.action = ACTION
         intent.flags = Intent.FLAG_INCLUDE_STOPPED_PACKAGES
         intent.putExtra(CONNECTION_STATUS,message)
         intent.putExtra(CONNECTION_INFO,info)
-        Log.d(TAG, "broadcasting ${CONNECTION_STATUS} $message $info")
+        Log.d(TAG, "broadcasting ${CONNECTION_STATUS} $comment $message $info")
         sendBroadcast(intent)
     }
 
     private fun getBluetoothAdapter(): BluetoothAdapter {
-        Log.d(TAG, "getBluetoothAdapter")
+        //Log.d(TAG, "getBluetoothAdapter")
         var bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         while (bluetoothAdapter == null) {
+            Log.d(TAG, "getBluetoothAdapter")
             Thread.sleep(5000)
             bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         }
-        Log.d(TAG, "getBluetoothAdapter: success")
         return bluetoothAdapter
     }
 
     private fun processMessages(): Boolean {
         Log.d(TAG, "processMessages: start")
-        while (true) {
+        while (!NotificationQueue.isEmpty()) {
             val message = NotificationQueue.take()// this will block until a message arrives
             Log.d(TAG, "dequeued message $message")
             if (message.contains("[poison]", false)) {
@@ -226,12 +245,12 @@ class BLEService: Service() {
     }
 
     private fun connect(address: String): Boolean {
-        broadcastMessage(CONNECTING_STATUS_CONNECTING,address)
+        broadcastMessage(CONNECTING_STATUS_CONNECTING,address,"connecting")
         try {
             mBluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
             if (mBluetoothManager == null) {
                 Log.d(TAG, "Bluetooth Manager is null")
-                broadcastMessage(CONNECTING_STATUS_FAILED,address)
+                broadcastMessage(CONNECTING_STATUS_FAILED,address,"failed")
                 return false
             }
             val bluetoothAdapter = getBluetoothAdapter()
@@ -244,32 +263,32 @@ class BLEService: Service() {
                 //Were not able to connect
                 val ret = mBluetoothGatt!!.connect()
                 if (ret) {
-                    Log.d(TAG, "Connected.")
-                    broadcastMessage(CONNECTING_STATUS_CONNECTED,address)
+                    Log.d(TAG, "Connected existing.")
+                    broadcastMessage(CONNECTING_STATUS_CONNECTED,address,"connected")
                 } else {
                     Log.d(TAG, "failed to connect.")
-                    broadcastMessage(CONNECTING_STATUS_FAILED,address)
+                    broadcastMessage(CONNECTING_STATUS_FAILED,address,"failed")
                 }
                 return ret
             }
-            Log.d(TAG, "getting device")
+            Log.d(TAG, "getting device for new connection")
             val device = bluetoothAdapter.getRemoteDevice(address)
             if (device == null) {
                 //Check whether a device was returned
                 Log.d(TAG, "failed to connect.")
-                broadcastMessage(CONNECTING_STATUS_FAILED, address)
+                broadcastMessage(CONNECTING_STATUS_FAILED, address,"failed")
                 return false      //Failed to find the device
             }
             //No previous device so get the Bluetooth device by referencing its address
-            Log.d(TAG, "getting gatt")
+            Log.d(TAG, "getting gatt for new connection")
             mBluetoothGatt = device.connectGatt(this, false, mGattCallback)                //Directly connect to the device so autoConnect is false
             mBluetoothDeviceAddress = address                                              //Record the address in case we need to reconnect with the existing BluetoothGatt
             if (mBluetoothGatt != null) {
-                Log.d(TAG, "Connected.")
-                broadcastMessage(CONNECTING_STATUS_CONNECTED,address)
+                Log.d(TAG, "Connected for new connection")
+                broadcastMessage(CONNECTING_STATUS_CONNECTED,address,"connected")
             } else {
                 Log.d(TAG, "failed to connect.")
-                broadcastMessage(CONNECTING_STATUS_FAILED,address)
+                broadcastMessage(CONNECTING_STATUS_FAILED,address,"failed")
             }
             return true
         } catch (e: Exception) {

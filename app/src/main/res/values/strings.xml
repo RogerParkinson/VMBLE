@@ -16,6 +16,7 @@
     <string name="connecting">Connecting&#8230;</string>
     <string name="disconnecting">Disconnecting&#8230;</string>
     <string name="disconnected">Disconnected</string>
+    <string name="no_address">No Address</string>
     <string name="connected_to_device">Connected to device %1$s</string>
     <string name="no_bluetooth_on_this_device">No Bluetooth on this device</string>
     <string name="bluetooth_enabled">Bluetooth enabled</string>

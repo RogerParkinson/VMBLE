@@ -55,7 +55,9 @@ class NotificationService : NotificationListenerService() {
         val message = "[$category][$title]$text"
 
         Log.d(TAG, "onNotificationPosted3 $message")
-        NotificationQueue.add(message)
+        val connectIntent = Intent(this.applicationContext, BLEService::class.java)
+        connectIntent.putExtra(BLEService.MESSAGE,message)
+        this.applicationContext.startService(connectIntent)
         Log.d(TAG, "onNotificationPosted4 $message okay")
     }
 
