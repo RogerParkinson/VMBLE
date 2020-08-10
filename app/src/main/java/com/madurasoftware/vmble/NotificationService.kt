@@ -52,6 +52,9 @@ class NotificationService : NotificationListenerService() {
         when (category) {
             CATEGORY_EVENT-> {}
             CATEGORY_MESSAGE-> {}
+            CATEGORY_ALARM-> {}
+            CATEGORY_CALL-> {}
+            CATEGORY_REMINDER-> {}
             else -> return
         }
         val title = map.getString(EXTRA_TITLE) ?: ""
