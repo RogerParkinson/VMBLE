@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
     private var popup = Popup(this)
     private val receiver = Receiver()
 
-    class MyHandler(private val mReadBuffer: TextView, private val mBluetoothStatus: TextView) : Handler() {
+    class MyHandler(private val mReadBuffer: TextView, private val mBluetoothStatus: TextView, private val button: Button) : Handler() {
         override fun handleMessage(msg: android.os.Message) {
             if (msg.what == MESSAGE_READ) {
                 var readMessage: String? = null
@@ -47,9 +47,15 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (msg.what == CONNECTING_STATUS) {
+                button.isEnabled = false
+                button.isClickable = false
                 when (msg.arg1) {
                     -1-> mBluetoothStatus.setText(R.string.connection_failed)
-                    1-> mBluetoothStatus.setText(String.format(mReadBuffer.context.getString(R.string.connected_to_device), msg.obj as String))
+                    1-> {
+                        mBluetoothStatus.setText(String.format(mReadBuffer.context.getString(R.string.connected_to_device), msg.obj as String))
+                        button.isEnabled = true
+                        button.isClickable = true
+                    }
                     2-> mBluetoothStatus.setText(R.string.connecting)
                     3-> mBluetoothStatus.setText(R.string.disconnecting)
                     4-> mBluetoothStatus.setText(R.string.disconnected)
@@ -64,26 +70,8 @@ class MainActivity : AppCompatActivity() {
         filter.addAction(ACTION)
         val receiver = receiver
         receiver.setHandler(MyHandler(findViewById<TextView>(R.id.readBuffer)!!,
-            findViewById<TextView>(R.id.bluetooth_status)!!))
+            findViewById<TextView>(R.id.bluetooth_status)!!,findViewById<Button>(R.id.button)!!))
         registerReceiver(receiver, filter)
-    }
-
-    private fun configureNotification() {
-        val notificationIntent = Intent(baseContext, NotificationService::class.java)
-        baseContext.startService(notificationIntent)
-        Log.d(TAG, "onStartCommand NotificationService started")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // Create the NotificationChannel
-            val name = "my channel"
-            val descriptionText = "my description"
-            val importance = NotificationManager.IMPORTANCE_DEFAULT
-            val mChannel = NotificationChannel(CHANNEL_ID, name, importance)
-            mChannel.description = descriptionText
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
-            val notificationManager = getSystemService(AppCompatActivity.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(mChannel)
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,15 +83,14 @@ class MainActivity : AppCompatActivity() {
             finishAffinity() // exits the app
         }
         configureReceiver()
-        configureNotification()
         val mText = findViewById<EditText>(R.id.editText)
         findViewById<Button>(R.id.button).setOnClickListener {
             sendNotification(mText.text.toString())
-            //NotificationQueue.add(mText.text.toString())
         }
     }
 
     private fun sendNotification(message:String) {
+        Log.d(TAG, "sendNotification $message")
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_bluetooth)
@@ -138,7 +125,8 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
             R.id.action_disconnect -> {
-                //startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+                val connectIntent = Intent(this.applicationContext, BLEService::class.java)
+                this.applicationContext.startService(connectIntent)
                 return true
             }
             else -> super.onOptionsItemSelected(item)
@@ -157,7 +145,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     companion object {
-        private const val CHANNEL_ID = "Testing notifications ###"
+        const val CHANNEL_ID = "Testing notifications ###"
 
     }
 }

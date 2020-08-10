@@ -93,8 +93,6 @@ fun requestBlePermissions(activity: Activity, requestCode: Int) {
 }
 
 fun connectToAddress(context: Context, d:DeviceWrapper) {
-//    val notificationIntent = Intent(context, NotificationService::class.java)
-//    context.startService(notificationIntent)
     mLastDeviceConnected = d
     if (d.deviceType == DeviceWrapper.DeviceType.BLE) {
         Log.d(TAG, "Invoking BLEService with ${d.address}")

@@ -9,10 +9,12 @@ import android.os.IBinder
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import java.util.*
 
 class NotificationService : NotificationListenerService() {
 
     private val TAG = "NotificationService"
+    private var mBluetoothDeviceAddress: String? = null//Address of the connected BLE device
 
     override fun onCreate() {
         super.onCreate()
@@ -24,6 +26,8 @@ class NotificationService : NotificationListenerService() {
 
     override fun onStartCommand(intent: Intent, flags:Int, startId:Int):Int {
         Log.d(TAG, "onStartCommand")
+        mBluetoothDeviceAddress = intent.getStringExtra(BLEService.CONNECTION)
+        //setTime()
         return Service.START_NOT_STICKY
     }
 
@@ -57,6 +61,7 @@ class NotificationService : NotificationListenerService() {
         Log.d(TAG, "onNotificationPosted3 $message")
         val connectIntent = Intent(this.applicationContext, BLEService::class.java)
         connectIntent.putExtra(BLEService.MESSAGE,message)
+        connectIntent.putExtra(BLEService.CONNECTION,mBluetoothDeviceAddress)
         this.applicationContext.startService(connectIntent)
         Log.d(TAG, "onNotificationPosted4 $message okay")
     }

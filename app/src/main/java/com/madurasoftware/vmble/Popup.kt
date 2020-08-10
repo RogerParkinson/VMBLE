@@ -2,12 +2,22 @@ package com.madurasoftware.vmble
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
 import android.graphics.drawable.ColorDrawable
+import android.os.Build
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.getSystemService
+
+private const val TAG = "Popup"
 
 class Popup(private val activity: Activity) {
 
@@ -33,6 +43,8 @@ class Popup(private val activity: Activity) {
             }
             val d = btArrayAdapter.getItem(position) as DeviceWrapper
             connectToAddress(anchorView.context,d)
+            configureNotification(anchorView.context,d)
+
         }
         if (!(listPairedDevices(activity, btArrayAdapter))) {
             return
@@ -52,5 +64,23 @@ class Popup(private val activity: Activity) {
         })
         popupWindow.isOutsideTouchable = true
         popupWindow.showAtLocation(anchorView, Gravity.CENTER, 0,0)
+    }
+    private fun configureNotification(context: Context, d:DeviceWrapper) {
+        val notificationIntent = Intent(context, NotificationService::class.java)
+        notificationIntent.putExtra(BLEService.CONNECTION,d.address)
+        context.startService(notificationIntent)
+        Log.d(TAG, "onStartCommand NotificationService started")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Create the NotificationChannel
+            val name = "my channel"
+            val descriptionText = "my description"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val mChannel = NotificationChannel(MainActivity.CHANNEL_ID, name, importance)
+            mChannel.description = descriptionText
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            val notificationManager = context.getSystemService(AppCompatActivity.NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(mChannel)
+        }
     }
 }

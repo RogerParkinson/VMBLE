@@ -99,11 +99,9 @@ class BLEService: Service() {
             android.os.Debug.waitForDebugger()
         }
         Log.d(TAG, "onCreate() called")
-        //NotificationQueue.add("starting")
     }
 
     override fun onDestroy() {
-//        baseContext.unregisterReceiver(this.messageReceiver)
     }
 
     override fun onStartCommand(intent: Intent, flags:Int, startId:Int):Int {
@@ -114,12 +112,15 @@ class BLEService: Service() {
         val message = intent.getStringExtra(MESSAGE)
         if (message !=null) {
             NotificationQueue.add(message)
+        } else {
+            val seconds = java.util.Date().getTime()/1000;
+            NotificationQueue.add("%%$seconds")
         }
         var address = intent.getStringExtra(CONNECTION)
         Log.d(TAG, "onStartCommand with address $address message $message existing BluetoothAddress $mBluetoothDeviceAddress ")
-        if (address == null) {
-            address = mBluetoothDeviceAddress
-        }
+//        if (address == null) {
+//            address = mBluetoothDeviceAddress
+//        }
         if (address == null) {
             broadcastMessage(CONNECTING_STATUS_NO_ADDRESS,"","no-address")
             return Service.START_NOT_STICKY
@@ -146,6 +147,7 @@ class BLEService: Service() {
             }
         }
         Log.d(TAG, "onStartCommand exiting")
+        isWriting = false
         return Service.START_NOT_STICKY
     }
 
@@ -172,12 +174,6 @@ class BLEService: Service() {
 //    // An activity has unbound from this service
     override fun onUnbind(intent: Intent): Boolean {
         Log.d(TAG, "onUnbind ")
-//
-////        if (mBluetoothGatt != null) {                                                   //Check for existing BluetoothGatt connection
-////            mBluetoothGatt!!.close()                                                     //Close BluetoothGatt coonection for proper cleanup
-////            mBluetoothGatt = null                                                      //No longer have a BluetoothGatt connection
-////        }
-//
         return super.onUnbind(intent)
     }
 
@@ -233,7 +229,7 @@ class BLEService: Service() {
     }
 
     private fun sendMessage(message: String):Boolean {
-        Log.d(TAG, "sendMessage $message")
+        Log.d(TAG, "sendMessage $isWriting $message")
         var data = message
         while (data.length > MAX_MESSAGE_SIZE) {
             sendQueue!!.add(data.substring(0, MAX_MESSAGE_SIZE))
